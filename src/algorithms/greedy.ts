@@ -1,61 +1,34 @@
-import { Cell, Grid } from '../types/grid';
-import { getNeighbors, reconstructPath } from './utils';
+import { Grid, Cell } from '../types/grid';
+import { getNeighbors } from '../utils/grid';
+import { manhattan, reconstructPath, keyOf } from './utils';
 
-function manhattan(a: Cell, b: Cell): number {
-  return Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
-}
+export interface Step { type: 'visit' | 'path'; cell: Cell; }
 
-export async function greedy(
-  grid: Grid,
-  start: Cell,
-  end: Cell,
-  onVisit: (cell: Cell) => Promise<void>
-): Promise<Cell[]> {
-  const openSet = new Set<string>([`${start.row}-${start.col}`]);
-  const closedSet = new Set<string>();
-  
-  start.h = manhattan(start, end);
+export function greedy(grid: Grid, start: Cell, end: Cell): Step[] {
+  const steps: Step[] = [];
+  const open: Cell[] = [start];
+  const cameFrom = new Map<string, Cell>();
+  const visited = new Set<string>();
 
-  while (openSet.size > 0) {
-    // Find node with lowest heuristic value
-    let current: Cell | null = null;
-    let lowestH = Infinity;
-    
-    for (const key of openSet) {
-      const [row, col] = key.split('-').map(Number);
-      const cell = grid[row][col];
-      if (cell.h! < lowestH) {
-        lowestH = cell.h!;
-        current = cell;
-      }
-    }
-
-    if (!current) break;
-    
-    const currentKey = `${current.row}-${current.col}`;
-    openSet.delete(currentKey);
-    closedSet.add(currentKey);
-
-    if (current.type !== 'start' && current.type !== 'end') {
-      await onVisit(current);
-    }
-
+  while (open.length) {
+    open.sort((a, b) => manhattan(a, end) - manhattan(b, end));
+    const current = open.shift()!;
+    const ck = keyOf(current);
+    if (visited.has(ck)) continue;
+    visited.add(ck);
+    steps.push({ type: 'visit', cell: current });
     if (current === end) {
-      return reconstructPath(current);
+      const path = reconstructPath(cameFrom, current);
+      for (const p of path) steps.push({ type: 'path', cell: p });
+      return steps;
     }
-
-    const neighbors = getNeighbors(grid, current);
-    for (const neighbor of neighbors) {
-      const neighborKey = `${neighbor.row}-${neighbor.col}`;
-      if (closedSet.has(neighborKey)) continue;
-
-      if (!openSet.has(neighborKey)) {
-        neighbor.parent = current;
-        neighbor.h = manhattan(neighbor, end);
-        openSet.add(neighborKey);
+    for (const n of getNeighbors(grid, current)) {
+      const nk = keyOf(n);
+      if (!visited.has(nk)) {
+        cameFrom.set(nk, current);
+        open.push(n);
       }
     }
   }
-
-  return [];
+  return steps;
 }

@@ -1,36 +1,31 @@
-import { Cell, Grid } from '../types/grid';
-import { getNeighbors, reconstructPath } from './utils';
+import { Grid, Cell } from '../types/grid';
+import { getNeighbors } from '../utils/grid';
+import { reconstructPath, keyOf } from './utils';
 
-export async function dfs(
-  grid: Grid,
-  start: Cell,
-  end: Cell,
-  onVisit: (cell: Cell) => Promise<void>
-): Promise<Cell[]> {
+export interface Step { type: 'visit' | 'path'; cell: Cell; }
+
+export function dfs(grid: Grid, start: Cell, end: Cell): Step[] {
+  const steps: Step[] = [];
   const stack: Cell[] = [start];
+  const prev = new Map<string, Cell>();
   const visited = new Set<string>();
 
-  while (stack.length > 0) {
-    const current = stack.pop()!;
-    const key = `${current.row}-${current.col}`;
-
-    if (visited.has(key)) continue;
-    visited.add(key);
-
-    await onVisit(current);
-
-    if (current.row === end.row && current.col === end.col) {
-      return reconstructPath(current);
-    }
-
-    const neighbors = getNeighbors(grid, current);
-    for (const neighbor of neighbors) {
-      if (!visited.has(`${neighbor.row}-${neighbor.col}`)) {
-        neighbor.parent = current;
-        stack.push(neighbor);
+  while (stack.length) {
+    const u = stack.pop()!;
+    const uk = keyOf(u);
+    if (visited.has(uk)) continue;
+    visited.add(uk);
+    steps.push({ type: 'visit', cell: u });
+    if (u === end) break;
+    for (const v of getNeighbors(grid, u)) {
+      const vk = keyOf(v);
+      if (!visited.has(vk)) {
+        prev.set(vk, u);
+        stack.push(v);
       }
     }
   }
-
-  return [];
+  const path = reconstructPath(prev, end);
+  for (const c of path) steps.push({ type: 'path', cell: c });
+  return steps;
 }

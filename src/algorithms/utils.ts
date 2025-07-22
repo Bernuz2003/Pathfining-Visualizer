@@ -1,38 +1,20 @@
-import { Cell, Grid } from '../types/grid';
+import { Cell } from '../types/grid';
 
-export function getNeighbors(grid: Grid, cell: Cell): Cell[] {
-  const neighbors: Cell[] = [];
-  const directions = [
-    [-1, 0], // up
-    [1, 0],  // down
-    [0, -1], // left
-    [0, 1],  // right
-  ];
-
-  for (const [dx, dy] of directions) {
-    const newRow = cell.row + dx;
-    const newCol = cell.col + dy;
-
-    if (
-      newRow >= 0 && newRow < grid.length &&
-      newCol >= 0 && newCol < grid[0].length &&
-      grid[newRow][newCol].type !== 'wall'
-    ) {
-      neighbors.push(grid[newRow][newCol]);
-    }
-  }
-
-  return neighbors;
+export function manhattan(a: Cell, b: Cell) {
+  return Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
 }
 
-export function reconstructPath(end: Cell): Cell[] {
+export function reconstructPath(cameFrom: Map<string, Cell>, end: Cell): Cell[] {
   const path: Cell[] = [];
   let current: Cell | undefined = end;
-
   while (current) {
-    path.unshift(current);
-    current = current.parent;
+    path.push(current);
+    const key = keyOf(current);
+    current = cameFrom.get(key);
   }
+  return path.reverse();
+}
 
-  return path;
+export function keyOf(c: Cell) {
+  return `${c.row},${c.col}`;
 }

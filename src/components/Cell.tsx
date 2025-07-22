@@ -1,37 +1,25 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { memo } from 'react';
 import { Cell as CellType } from '../types/grid';
 
-const cellColors = {
-  empty: 'bg-white',
-  start: 'bg-green-500',
-  end: 'bg-red-500',
-  wall: 'bg-gray-800',
-  visited: 'bg-blue-200',
-  path: 'bg-purple-500',
-  current: 'bg-yellow-300',
-};
-
-interface CellProps {
+interface Props {
   cell: CellType;
-  onClick: (isRight: boolean) => void;
-  onMouseEnter: () => void;
+  onMouseDown: (row: number, col: number, button: number) => void;
+  onMouseEnter: (row: number, col: number, isDown: boolean) => void;
 }
 
-export const Cell: React.FC<CellProps> = ({ cell, onClick, onMouseEnter }) => {
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    onClick(e.button === 2);
-  };
+export const Cell: React.FC<Props> = memo(({ cell, onMouseDown, onMouseEnter }) => {
+  const className = [
+    'cell',
+    cell.type,
+    cell.visited ? 'visited' : '',
+    cell.path ? 'path' : ''
+  ].join(' ');
 
   return (
-    <motion.div
-      className={`w-6 h-6 border-[0.5px] border-gray-200 ${cellColors[cell.type]}`}
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      onMouseDown={handleMouseDown}
-      onMouseEnter={onMouseEnter}
-      onContextMenu={(e) => e.preventDefault()}
+    <div
+      className={className}
+      onMouseDown={e => onMouseDown(cell.row, cell.col, e.button)}
+      onMouseEnter={e => onMouseEnter(cell.row, cell.col, e.buttons === 1)}
     />
   );
-};
+});

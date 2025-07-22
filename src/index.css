@@ -1,3 +1,194 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+:root {
+  --color-start: #2ecc71;
+  --color-end: #e74c3c;
+  --color-wall: #34495e;
+  --color-visited: #3498db;
+  --color-path: #f1c40f;
+  --color-bg: #ecf0f1;
+  --color-surface: #ffffff;
+  --color-text: #2c3e50;
+  --color-border: #bdc3c7;
+  --color-primary: #3498db;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  gap: 1.5rem;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+h1 {
+  text-align: center;
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 2.25rem;
+  margin: 0;
+}
+
+.controls-container {
+  background-color: var(--color-surface);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-right: 1px solid var(--color-border);
+}
+.control-group:last-child {
+  border-right: none;
+}
+
+.control-group label {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.control-group input[type="number"] {
+  width: 4rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  text-align: center;
+}
+
+.control-group button, .action-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  background-color: #e0e0e0;
+  color: var(--color-text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.control-group button:hover {
+  background-color: #d0d0d0;
+}
+
+.control-group button:active {
+  transform: scale(0.95);
+}
+
+.control-group button.active {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.control-group button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-button.primary {
+  background-color: var(--color-start);
+  color: white;
+}
+.action-button.secondary {
+  background-color: var(--color-end);
+  color: white;
+}
+
+.grid-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 0; /* Important for flexbox children */
+}
+
+.grid {
+  display: grid;
+  gap: 1px;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  user-select: none;
+  width: 100%;
+  height: 100%;
+}
+
+.cell {
+  background: var(--color-surface);
+  aspect-ratio: 1 / 1;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.cell.start { background: var(--color-start); }
+.cell.end { background: var(--color-end); }
+.cell.wall { background: var(--color-wall); }
+
+.cell.visited {
+  animation: visit-anim 0.5s forwards;
+}
+
+.cell.path {
+  animation: path-anim 0.5s forwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes visit-anim {
+  0% { transform: scale(0.3); background-color: var(--color-surface); border-radius: 50%; }
+  50% { background-color: var(--color-visited); }
+  100% { transform: scale(1); background-color: var(--color-visited); border-radius: 0; }
+}
+
+@keyframes path-anim {
+  0% { transform: scale(0.3); background-color: var(--color-visited); }
+  50% { background-color: var(--color-path); }
+  100% { transform: scale(1.1); background-color: var(--color-path); }
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  align-items: center;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+.legend .cell { width: 16px; height: 16px; border-radius: 0.25rem; }
+
+.stats {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+  margin-left: auto;
+}
+.stats p { margin: 0; }
+.stats span { font-weight: 600; }

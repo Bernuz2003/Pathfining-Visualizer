@@ -1,68 +1,53 @@
-import { Cell, Grid } from '../types/grid';
-import { getNeighbors, reconstructPath } from './utils';
+import { Grid, Cell } from '../types/grid';
+import { getNeighbors } from '../utils/grid';
+import { reconstructPath, keyOf } from './utils';
 
-export async function dijkstra(
-  grid: Grid,
-  start: Cell,
-  end: Cell,
-  onVisit: (cell: Cell) => Promise<void>
-): Promise<Cell[]> {
-  const distances = new Map<string, number>();
-  const unvisited = new Set<string>();
-  
-  // Initialize distances
+export interface Step {
+  type: 'visit' | 'path';
+  cell: Cell;
+}
+
+export function dijkstra(grid: Grid, start: Cell, end: Cell): Step[] {
+  const steps: Step[] = [];
+  const dist = new Map<string, number>();
+  const prev = new Map<string, Cell>();
+  const visited = new Set<string>();
+
+  const pq: [Cell, number][] = [];
+  const push = (cell: Cell, d: number) => {
+    pq.push([cell, d]);
+    pq.sort((a, b) => a[1] - b[1]);
+  };
+
   for (const row of grid) {
     for (const cell of row) {
-      const key = `${cell.row}-${cell.col}`;
-      distances.set(key, Infinity);
-      unvisited.add(key);
+      dist.set(keyOf(cell), Infinity);
     }
   }
-  
-  distances.set(`${start.row}-${start.col}`, 0);
-  start.g = 0;
 
-  while (unvisited.size > 0) {
-    // Find unvisited node with minimum distance
-    let minDistance = Infinity;
-    let current: Cell | null = null;
-    
-    for (const key of unvisited) {
-      const distance = distances.get(key)!;
-      if (distance < minDistance) {
-        minDistance = distance;
-        const [row, col] = key.split('-').map(Number);
-        current = grid[row][col];
-      }
-    }
+  dist.set(keyOf(start), 0);
+  push(start, 0);
 
-    if (!current || minDistance === Infinity) break;
-    
-    const currentKey = `${current.row}-${current.col}`;
-    unvisited.delete(currentKey);
-    
-    if (current.type !== 'start' && current.type !== 'end') {
-      await onVisit(current);
-    }
+  while (pq.length) {
+    const [u] = pq.shift()!;
+    const k = keyOf(u);
+    if (visited.has(k)) continue;
+    visited.add(k);
+    steps.push({ type: 'visit', cell: u });
+    if (u === end) break;
 
-    if (current === end) {
-      return reconstructPath(current);
-    }
-
-    const neighbors = getNeighbors(grid, current);
-    for (const neighbor of neighbors) {
-      if (!unvisited.has(`${neighbor.row}-${neighbor.col}`)) continue;
-      
-      const distance = distances.get(currentKey)! + 1;
-      const neighborKey = `${neighbor.row}-${neighbor.col}`;
-      
-      if (distance < distances.get(neighborKey)!) {
-        distances.set(neighborKey, distance);
-        neighbor.g = distance;
-        neighbor.parent = current;
+    for (const v of getNeighbors(grid, u)) {
+      const vk = keyOf(v);
+      const alt = (dist.get(k) ?? Infinity) + 1; // peso unitario
+      if (alt < (dist.get(vk) ?? Infinity)) {
+        dist.set(vk, alt);
+        prev.set(vk, u);
+        push(v, alt);
       }
     }
   }
 
-  return [];
+  const path = reconstructPath(prev, end);
+  for (const cell of path) steps.push({ type: 'path', cell });
+  return steps;
 }

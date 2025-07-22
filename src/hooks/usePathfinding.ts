@@ -1,71 +1,44 @@
-import { useState, useRef, useCallback } from 'react';
-import { Cell, Grid, Algorithm, PathfindingStats } from '../types/grid';
-import * as algorithms from '../algorithms';
+import { useCallback } from 'react';
+import { usePF } from '../state/PathfindingContext.tsx';
+import { Algorithm, Cell } from '../types/grid';
+import * as algos from '../algorithms';
 
 export function usePathfinding() {
-  const [isRunning, setIsRunning] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [stats, setStats] = useState<PathfindingStats>({
-    visitedCells: 0,
-    pathLength: 0,
-    executionTime: 0
-  });
+  const { state, dispatch } = usePF();
 
-  const startRef = useRef<Cell | null>(null);
-  const endRef = useRef<Cell | null>(null);
-
-  const startVisualization = useCallback(async (
-    grid: Grid,
-    algorithm: Algorithm,
-    speed: number
-  ) => {
-    if (!startRef.current || !endRef.current) {
-      alert('Please select both start and end points');
-      return;
-    }
-
-    setIsRunning(true);
+  const run = useCallback((algorithm: Algorithm) => {
+    if (!state.start || !state.end) return;
+    dispatch({ type: 'CLEAR_VISUAL' });
+    dispatch({ type: 'SET_RUNNING', running: true });
     const startTime = performance.now();
-    let visitedCount = 0;
 
-    const onVisit = async (cell: Cell) => {
-      if (isPaused) {
-        await new Promise(resolve => {
-          const checkPause = () => {
-            if (!isPaused) resolve(null);
-            else setTimeout(checkPause, 100);
-          };
-          checkPause();
-        });
+    const steps = algos[algorithm](state.grid, state.grid[state.start.row][state.start.col], state.grid[state.end.row][state.end.col]);
+
+    let visited = 0;
+    let pathLen = 0;
+
+    let i = 0;
+    const tick = () => {
+      const batch = 8; // velocità animazione
+      for (let j = 0; j < batch && i < steps.length; j++, i++) {
+        const s = steps[i];
+        if (s.type === 'visit') {
+          visited++;
+          dispatch({ type: 'SET_VISUAL', row: s.cell.row, col: s.cell.col, visited: true });
+        } else {
+          pathLen++;
+          dispatch({ type: 'SET_VISUAL', row: s.cell.row, col: s.cell.col, path: true });
+        }
       }
-      visitedCount++;
-      setStats(prev => ({ ...prev, visitedCells: visitedCount }));
-      await new Promise(resolve => setTimeout(resolve, 101 - speed));
+      if (i < steps.length) requestAnimationFrame(tick);
+      else {
+        const exec = performance.now() - startTime;
+        dispatch({ type: 'SET_STATS', stats: { visitedCells: visited, pathLength: pathLen, executionTime: exec } });
+        dispatch({ type: 'SET_RUNNING', running: false });
+      }
     };
+    requestAnimationFrame(tick);
+  }, [state.grid, state.start, state.end, dispatch]);
 
-    const path = await algorithms[algorithm](
-      grid,
-      startRef.current,
-      endRef.current,
-      onVisit
-    );
-
-    setStats(prev => ({
-      ...prev,
-      pathLength: path.length,
-      executionTime: Math.round(performance.now() - startTime)
-    }));
-    setIsRunning(false);
-  }, [isPaused]);
-
-  return {
-    isRunning,
-    isPaused,
-    stats,
-    startRef,
-    endRef,
-    setIsRunning,
-    setIsPaused,
-    startVisualization
-  };
+  return { run, isRunning: state.isRunning, stats: state.stats };
 }

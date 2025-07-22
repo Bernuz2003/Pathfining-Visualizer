@@ -1,27 +1,20 @@
-export type CellType = 'empty' | 'start' | 'end' | 'wall' | 'visited' | 'path' | 'current';
-
+export type CellType = 'empty' | 'wall' | 'start' | 'end';
 export interface Cell {
   row: number;
   col: number;
   type: CellType;
-  f?: number; // f = g + h (for A*)
-  g?: number; // Cost from start to current node
-  h?: number; // Heuristic (estimated cost from current to end)
-  parent?: Cell; // For path reconstruction
+  visited?: boolean;
+  path?: boolean;
+  weight?: number;
 }
-
 export type Grid = Cell[][];
 
-export type Algorithm = 'bfs' | 'dfs' | 'dijkstra' | 'astar' | 'greedy';
+export type Algorithm = 'astar' | 'dijkstra' | 'bfs' | 'dfs' | 'greedy';
 
 export interface PathfindingStats {
   visitedCells: number;
   pathLength: number;
-  executionTime: number;
+  executionTime: number; // ms
 }
 
-export interface GridConfig {
-  rows: number;
-  cols: number;
-  wallDensity?: number;
-}
+export type ToolMode = 'start' | 'end' | 'wall' | 'erase';

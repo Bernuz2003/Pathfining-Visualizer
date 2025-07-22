@@ -1,70 +1,73 @@
-import { Cell, Grid } from '../types/grid';
-import { getNeighbors, reconstructPath } from './utils';
+import { Grid, Cell } from '../types/grid';
+import { getNeighbors } from '../utils/grid';
+import { manhattan, reconstructPath, keyOf } from './utils';
 
-function manhattan(a: Cell, b: Cell): number {
-  return Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
+export interface Step {
+  type: 'visit' | 'path';
+  cell: Cell;
 }
 
-export async function astar(
-  grid: Grid,
-  start: Cell,
-  end: Cell,
-  onVisit: (cell: Cell) => Promise<void>
-): Promise<Cell[]> {
-  const openSet = new Set<string>([`${start.row}-${start.col}`]);
-  const closedSet = new Set<string>();
-  
-  start.g = 0;
-  start.h = manhattan(start, end);
-  start.f = start.h;
+export function astar(grid: Grid, start: Cell, end: Cell): Step[] {
+  const steps: Step[] = [];
+  const open = new Set<string>();
+  const closed = new Set<string>();
 
-  while (openSet.size > 0) {
-    // Find node with lowest f score
-    let current: Cell | null = null;
-    let lowestF = Infinity;
-    
-    for (const key of openSet) {
-      const [row, col] = key.split('-').map(Number);
-      const cell = grid[row][col];
-      if (cell.f! < lowestF) {
-        lowestF = cell.f!;
-        current = cell;
+  const g = new Map<string, number>();
+  const f = new Map<string, number>();
+  const cameFrom = new Map<string, Cell>();
+
+  const startKey = keyOf(start);
+  const endKey = keyOf(end);
+
+  g.set(startKey, 0);
+  f.set(startKey, manhattan(start, end));
+  open.add(startKey);
+
+  const getLowestF = () => {
+    let best: string | null = null;
+    let bestVal = Infinity;
+    for (const k of open) {
+      const val = f.get(k) ?? Infinity;
+      if (val < bestVal) {
+        bestVal = val;
+        best = k;
       }
     }
+    return best!;
+  };
 
-    if (!current) break;
-    
-    const currentKey = `${current.row}-${current.col}`;
-    openSet.delete(currentKey);
-    closedSet.add(currentKey);
+  const keyToCell = (key: string): Cell => {
+    const [r, c] = key.split(',').map(Number);
+    return grid[r][c];
+  };
 
-    if (current.type !== 'start' && current.type !== 'end') {
-      await onVisit(current);
+  while (open.size) {
+    const currentKey = getLowestF();
+    open.delete(currentKey);
+    closed.add(currentKey);
+
+    const current = keyToCell(currentKey);
+    steps.push({ type: 'visit', cell: current });
+
+    if (currentKey === endKey) {
+      const path = reconstructPath(cameFrom, current);
+      for (const cell of path) steps.push({ type: 'path', cell });
+      return steps;
     }
 
-    if (current === end) {
-      return reconstructPath(current);
-    }
+    for (const neighbor of getNeighbors(grid, current)) {
+      const nk = keyOf(neighbor);
+      if (closed.has(nk)) continue;
 
-    const neighbors = getNeighbors(grid, current);
-    for (const neighbor of neighbors) {
-      const neighborKey = `${neighbor.row}-${neighbor.col}`;
-      if (closedSet.has(neighborKey)) continue;
+      const tentativeG = (g.get(currentKey) ?? Infinity) + 1;
+      if (!open.has(nk)) open.add(nk);
+      else if (tentativeG >= (g.get(nk) ?? Infinity)) continue;
 
-      const tentativeG = current.g! + 1;
-
-      if (!openSet.has(neighborKey)) {
-        openSet.add(neighborKey);
-      } else if (tentativeG >= neighbor.g!) {
-        continue;
-      }
-
-      neighbor.parent = current;
-      neighbor.g = tentativeG;
-      neighbor.h = manhattan(neighbor, end);
-      neighbor.f = neighbor.g + neighbor.h;
+      cameFrom.set(nk, current);
+      g.set(nk, tentativeG);
+      f.set(nk, tentativeG + manhattan(neighbor, end));
     }
   }
 
-  return [];
+  return steps; // nessun path
 }
